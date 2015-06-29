@@ -18,6 +18,7 @@ data BType
     | BDict     [(String, BType)]
     deriving (Eq, Show)
 
+-- |Type class for producing BEncoded strings.
 class Encode a where
     -- |Given a type that can be Bencoded, invoke the correct encoding
     -- function.
@@ -39,17 +40,18 @@ instance Encode BType where
     encode (BDict xs) = "d" ++ foldDict ++ "e"
         where foldDict = foldl (\a x -> a ++ encode (BString $ fst x) ++ encode (snd x)) "" xs
 
+-- |Decode a Bencoded string completely and return the BType structure from
+-- that string. Calls the recursive decoding function, rDecode, internally.
 decode :: String -> Either BError BType
 decode s = let val = rDecode s
            in case val of
                 Left msg -> Left msg
-                Right v -> let (result, rest) = v
-                           in if rest /= ""
-                                then Left "String was not entirely decoded."
-                                else Right result
+                Right (v, rest) -> if rest /= ""
+                                     then Left "String was not entirely decoded."
+                                     else Right v
 
 -- |Given a String, parse the string into the resulting set of Bencode
--- values.
+-- values and the remaining string.
 rDecode :: String -> Either BError (BType, String)
 rDecode [] = Left "No value found to decode."
 rDecode s@(x:xs)
@@ -62,7 +64,10 @@ rDecode s@(x:xs)
                     Left msg -> Left msg
                     Right val -> Right (BString val, dropString s (length val))
 
-parseDict :: String -> [(String, BType)] -> Either String (BType, String)
+-- |Given a string and accumulator dictionary, return a dictionary
+-- consisting of the accumulator and the new key/value pair. Also return
+-- the rest of the string after the key/value pair has been extracted.
+parseDict :: String -> [(String, BType)] -> Either BError (BType, String)
 parseDict [] _ = Left "No value found to decode into dictionary."
 parseDict s@(x:xs) acc
     | x == 'e' = Right (BDict acc, xs)
@@ -72,18 +77,19 @@ parseDict s@(x:xs) acc
                        Right k -> let val = rDecode $ dropString s (length k)
                                   in case val of
                                        Left msg -> Left msg
-                                       Right v -> let (value, rest) = v
-                                                  in parseDict rest (acc ++ [(k, value)])
+                                       Right (v, rest) -> parseDict rest (acc ++ [(k, v)])
 
-parseList :: String -> [BType] -> Either String (BType, String)
+-- |Given a string and accumulator list, return a list consisting of the
+-- accumulator and the new key/value pair. Also return the rest of the
+-- string after the next element of the list has been extracted.
+parseList :: String -> [BType] -> Either BError (BType, String)
 parseList [] _ = Left "No value found to decode into list."
 parseList s@(x:xs) acc
     | x == 'e' = Right (BList acc, xs)
     | x == 'd' || x == 'l' = let val = rDecode s
                              in case val of
                                   Left msg -> Left msg
-                                  Right va -> let (v, rest) = va
-                                               in parseList rest (acc ++ [v])
+                                  Right (v, rest) -> parseList rest (acc ++ [v])
     | x == 'i' = let rest = dropInt s
                  in case parseInt s of
                       Left msg -> Left msg
@@ -93,8 +99,7 @@ parseList s@(x:xs) acc
                     Right val -> let rest = dropString s (length val)
                                  in parseList rest (acc ++ [BString val])
 
--- |Parse a string from a Bencoded string and return it, along with the
--- remaining portion of the original Bencoded string.
+-- |Parse a string from a Bencoded string.
 parseString :: String -> Either BError String
 parseString s = let maybeVal = readNumUntilChar s ':'
                     rest = dropUntil (== ':') s -- drop through ':'
@@ -102,12 +107,11 @@ parseString s = let maybeVal = readNumUntilChar s ':'
                      Nothing -> Left "Invalid characters in decoded string length."
                      Just len -> Right $ take len rest
 
--- |Drop n the string of length n from the Bencoded value.
+-- |Drop the string of length n from the Bencoded value.
 dropString :: String -> Int -> String
 dropString s n = drop n $ dropUntil (== ':') s
 
--- |Parse an integer from a Bencoded string and return it, along with the
--- remaining portion of the original Bencoded string.
+-- |Parse an integer from a Bencoded string.
 parseInt :: String -> Either BError Integer
 parseInt [] = Left "No value found to decode into string."
 parseInt (_:xs) =
@@ -116,9 +120,11 @@ parseInt (_:xs) =
          Nothing -> Left "Invalid characters in decoded integer."
          Just i -> Right $ toInteger i
 
+-- |Drop an integer from a Bencoded string.
 dropInt :: String -> String
 dropInt = dropUntil (== 'e')
 
+-- |Read a number from a string until a specified character is reached.
 readNumUntilChar :: String -> Char -> Maybe Int
 readNumUntilChar s c = let val = reads (takeWhile (/= c) s) :: [(Int, String)]
                        in case val of
