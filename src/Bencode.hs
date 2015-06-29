@@ -109,8 +109,9 @@ dropInt = dropUntil (== 'e')
 
 -- |Read a number from a string until a specified character is reached.
 readNumUntilChar :: String -> Char -> Either BError Int
-readNumUntilChar s c = let val = reads (takeWhile (/= c) s) :: [(Int, String)]
-                       in case val of
-                            [(i, "")] -> Right i
-                            _ -> Left "Invalid characters in decoded string."
+readNumUntilChar s c = 
+    let val = reads (takeWhile (/= c) s) :: [(Int, String)]
+        in case val of
+             [(i, "")] -> Right i
+             _ -> Left "Invalid characters in decoded string."
 
