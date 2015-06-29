@@ -51,6 +51,7 @@ decode s = let val = rDecode s
 -- |Given a String, parse the string into the resulting set of Bencode
 -- values.
 rDecode :: String -> Either BError (BType, String)
+rDecode [] = Left "No value found to decode."
 rDecode s@(x:xs)
     | x == 'i' = case parseInt s of
                    Left msg -> Left msg
@@ -62,6 +63,7 @@ rDecode s@(x:xs)
                     Right val -> Right (BString val, dropString s (length val))
 
 parseDict :: String -> [(String, BType)] -> Either String (BType, String)
+parseDict [] _ = Left "No value found to decode into dictionary."
 parseDict s@(x:xs) acc
     | x == 'e' = Right (BDict acc, xs)
     | otherwise = let key = parseString s
@@ -74,12 +76,13 @@ parseDict s@(x:xs) acc
                                                   in parseDict rest (acc ++ [(k, value)])
 
 parseList :: String -> [BType] -> Either String (BType, String)
+parseList [] _ = Left "No value found to decode into list."
 parseList s@(x:xs) acc
     | x == 'e' = Right (BList acc, xs)
     | x == 'd' || x == 'l' = let val = rDecode s
                              in case val of
                                   Left msg -> Left msg
-                                  Right val -> let (v, rest) = val
+                                  Right va -> let (v, rest) = va
                                                in parseList rest (acc ++ [v])
     | x == 'i' = let rest = dropInt s
                  in case parseInt s of
@@ -106,7 +109,8 @@ dropString s n = drop n $ dropUntil (== ':') s
 -- |Parse an integer from a Bencoded string and return it, along with the
 -- remaining portion of the original Bencoded string.
 parseInt :: String -> Either BError Integer
-parseInt (x:xs) =
+parseInt [] = Left "No value found to decode into string."
+parseInt (_:xs) =
     let maybeVal = readNumUntilChar xs 'e'
     in case maybeVal of
          Nothing -> Left "Invalid characters in decoded integer."
@@ -119,5 +123,5 @@ readNumUntilChar :: String -> Char -> Maybe Int
 readNumUntilChar s c = let val = reads (takeWhile (/= c) s) :: [(Int, String)]
                        in case val of
                             [(i, "")] -> Just i
-                            otherwise -> Nothing
+                            _ -> Nothing
 
