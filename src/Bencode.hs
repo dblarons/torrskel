@@ -7,6 +7,8 @@ module Bencode
       BType(BInteger, BString, BList, BDict)
       ) where
 
+import Util
+
 type BError = String
 
 data BType
@@ -92,14 +94,14 @@ parseList s@(x:xs) acc
 -- remaining portion of the original Bencoded string.
 parseString :: String -> Either BError String
 parseString s = let maybeVal = readNumUntilChar s ':'
-                    rest = dropUntil (/= ':') s -- drop through ':'
+                    rest = dropUntil (== ':') s -- drop through ':'
                 in case maybeVal of
                      Nothing -> Left "Invalid characters in decoded string length."
                      Just len -> Right $ take len rest
 
 -- |Drop n the string of length n from the Bencoded value.
 dropString :: String -> Int -> String
-dropString s n = drop n $ dropUntil (/= ':') s
+dropString s n = drop n $ dropUntil (== ':') s
 
 -- |Parse an integer from a Bencoded string and return it, along with the
 -- remaining portion of the original Bencoded string.
@@ -111,7 +113,7 @@ parseInt (x:xs) =
          Just i -> Right $ toInteger i
 
 dropInt :: String -> String
-dropInt = dropUntil (/= 'e')
+dropInt = dropUntil (== 'e')
 
 readNumUntilChar :: String -> Char -> Maybe Int
 readNumUntilChar s c = let val = reads (takeWhile (/= c) s) :: [(Int, String)]
@@ -119,5 +121,3 @@ readNumUntilChar s c = let val = reads (takeWhile (/= c) s) :: [(Int, String)]
                             [(i, "")] -> Just i
                             otherwise -> Nothing
 
-dropUntil :: (a -> Bool) -> [a] -> [a]
-dropUntil f xs = drop 1 $ dropWhile f xs
