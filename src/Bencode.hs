@@ -38,12 +38,12 @@ instance Encode BType where
     encode (BString xs) = pack (show (length xs)) `append` pack ":" `append` xs
 
     -- |Encoding lists.
-    encode (BList []) = pack "le"
-    encode (BList xs) = pack "l" `append` foldl (\a x -> a `append` encode x) (pack "") xs `append` pack "e"
+    encode (BList [])   = pack "le"
+    encode (BList xs)   = pack "l" `append` foldl (\a x -> a `append` encode x) (pack "") xs `append` pack "e"
 
     -- |Encoding dictionaries.
-    encode (BDict xs) = pack "d" `append` foldDict `append` pack "e"
-        where foldDict = foldl (\a x -> a `append` encode (BString $ fst x) `append` encode (snd x)) (pack "") xs
+    encode (BDict xs)   = pack "d" `append` foldDict `append` pack "e"
+        where foldDict  = foldl (\a x -> a `append` encode (BString $ fst x) `append` encode (snd x)) (pack "") xs
 
 -- |Decode a Bencoded string completely and return the BType structure from
 -- that string. Calls the recursive decoding function, rDecode, internally.
@@ -64,8 +64,8 @@ rDecode xs
                     Right (BInteger val, dropInt xs)
           'l' -> parseList (tail xs) []
           'd' -> parseDict (tail xs) []
-          _ -> do val <- parseString xs
-                  Right (BString val, dropString xs (length val))
+          _   -> do val <- parseString xs
+                    Right (BString val, dropString xs (length val))
 
 -- |Given a string and accumulator dictionary, return a dictionary
 -- consisting of the accumulator and the new key/value pair. Also return
@@ -76,9 +76,9 @@ parseDict xs acc =
       then Left "No value found to decode into dictionary."
       else case head xs of
          'e' -> Right (BDict acc, tail xs)
-         _ ->  do key <- parseString xs
-                  (val, rest) <- rDecode $ dropString xs (length key)
-                  parseDict rest (acc ++ [(key, val)])
+         _   -> do key         <- parseString xs
+                   (val, rest) <- rDecode $ dropString xs (length key)
+                   parseDict rest (acc ++ [(key, val)])
 
 -- |Given a string and accumulator list, return a list consisting of the
 -- accumulator and the new key/value pair. Also return the rest of the
@@ -96,9 +96,9 @@ parseList xs acc =
         'i' -> do let rest = dropInt xs
                   val <- parseInt xs
                   parseList rest (acc ++ [BInteger val])
-        _ ->  do val <- parseString xs
-                 let rest = dropString xs (length val)
-                 parseList rest (acc ++ [BString val])
+        _   -> do val <- parseString xs
+                  let rest = dropString xs (length val)
+                  parseList rest (acc ++ [BString val])
 
 -- |Parse a string from a Bencoded string.
 parseString :: ByteString -> Either BError ByteString
@@ -128,5 +128,5 @@ readNumUntilChar s c =
     let val = reads (unpack $ takeWhile (/= c) s) :: [(Int, String)]
     in case val of
          [(i, "")] -> Right i
-         _ -> Left "Invalid characters in decoded string."
+         _         -> Left "Invalid characters in decoded string."
 
