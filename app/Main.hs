@@ -1,6 +1,6 @@
 module Main where
 
-import Bencode
+import FileManager
 
 main :: IO ()
 main = someFunc
