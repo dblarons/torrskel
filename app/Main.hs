@@ -1,6 +1,7 @@
 module Main where
 
-import FileManager
+import MetaInfoFile
+import Bencode
 
 main :: IO ()
 main = someFunc
