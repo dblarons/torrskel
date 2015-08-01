@@ -20,8 +20,7 @@ library
                      , FileManager
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
-                     , text
-                     , text-show
+                     , bytestring
   default-language:    Haskell2010
 
 executable torrskel-exe
