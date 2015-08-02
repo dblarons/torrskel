@@ -18,6 +18,7 @@ library
   exposed-modules:     Bencode
                      , Tracker
                      , MetaInfoFile
+                     , BType
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , bytestring

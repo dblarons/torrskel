@@ -1,28 +1,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Bencode
-    ( Encode,
-      encode,
-      decode,
-      BError,
-      BType(BInteger, BString, BList, BDict)
+    ( encode,
+      decode
       ) where
 
 import Data.ByteString (ByteString, length, append, tail, null,
                        take, drop)
 import Data.ByteString.Char8 (pack, unpack, head, takeWhile)
 import Prelude hiding (length, head, tail, null, take, drop, takeWhile)
+import BType
 
 import Util
-
-type BError = String
-
-data BType
-    = BString   ByteString
-    | BList     [BType]
-    | BInteger  Integer
-    | BDict     [(ByteString, BType)]
-    deriving (Eq, Show)
 
 -- |Type class for producing BEncoded strings.
 class Encode a where
@@ -47,7 +36,7 @@ instance Encode BType where
 
 -- |Decode a Bencoded string completely and return the BType structure from
 -- that string. Calls the recursive decoding function, rDecode, internally.
-decode :: ByteString -> Either BError BType
+decode :: ByteString -> Either String BType
 decode s = do (v, rest) <- rDecode s
               if rest /= pack ""
                 then Left "String was not entirely decoded."
@@ -55,7 +44,7 @@ decode s = do (v, rest) <- rDecode s
 
 -- |Given a String, parse the string into the resulting set of Bencode
 -- values and the remaining string.
-rDecode :: ByteString -> Either BError (BType, ByteString)
+rDecode :: ByteString -> Either String (BType, ByteString)
 rDecode xs
     | null xs = Left "No value found to decode."
     | otherwise =
@@ -70,7 +59,7 @@ rDecode xs
 -- |Given a string and accumulator dictionary, return a dictionary
 -- consisting of the accumulator and the new key/value pair. Also return
 -- the rest of the string after the key/value pair has been extracted.
-parseDict :: ByteString -> [(ByteString, BType)] -> Either BError (BType, ByteString)
+parseDict :: ByteString -> [(ByteString, BType)] -> Either String (BType, ByteString)
 parseDict xs acc =
     if null xs
       then Left "No value found to decode into dictionary."
@@ -83,7 +72,7 @@ parseDict xs acc =
 -- |Given a string and accumulator list, return a list consisting of the
 -- accumulator and the new key/value pair. Also return the rest of the
 -- string after the next element of the list has been extracted.
-parseList :: ByteString -> [BType] -> Either BError (BType, ByteString)
+parseList :: ByteString -> [BType] -> Either String (BType, ByteString)
 parseList xs acc =
     if null xs
       then Left "No value found to decode into list."
@@ -101,7 +90,7 @@ parseList xs acc =
                   parseList rest (acc ++ [BString val])
 
 -- |Parse a string from a Bencoded string.
-parseString :: ByteString -> Either BError ByteString
+parseString :: ByteString -> Either String ByteString
 parseString s = do strLen <- readNumUntilChar s ':'
                    let rest = dropUntil (== ':') s -- drop through ':'
                    Right $ take strLen rest
@@ -111,7 +100,7 @@ dropString :: ByteString -> Int -> ByteString
 dropString s n = drop n $ dropUntil (== ':') s
 
 -- |Parse an integer from a Bencoded string.
-parseInt :: ByteString -> Either BError Integer
+parseInt :: ByteString -> Either String Integer
 parseInt xs = 
     if null xs
       then Left "No value found to decode into string."
@@ -123,7 +112,7 @@ dropInt :: ByteString -> ByteString
 dropInt = dropUntil (== 'e')
 
 -- |Read a number from a string until a specified character is reached.
-readNumUntilChar :: ByteString -> Char -> Either BError Int
+readNumUntilChar :: ByteString -> Char -> Either String Int
 readNumUntilChar s c = 
     let val = reads (unpack $ takeWhile (/= c) s) :: [(Int, String)]
     in case val of

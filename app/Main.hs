@@ -4,4 +4,4 @@ import MetaInfoFile
 import Bencode
 
 main :: IO ()
-main = someFunc
+main = putStrLn "foo"
