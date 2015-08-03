@@ -39,22 +39,22 @@ instance Encode BType where
 decode :: ByteString -> Either String BType
 decode s = do (v, rest) <- rDecode s
               if rest /= pack ""
-                then Left "String was not entirely decoded."
-                else Right v
+                then fail "String was not entirely decoded."
+                else return v
 
 -- |Given a String, parse the string into the resulting set of Bencode
 -- values and the remaining string.
 rDecode :: ByteString -> Either String (BType, ByteString)
 rDecode xs
-    | null xs = Left "No value found to decode."
+    | null xs = fail "No value found to decode."
     | otherwise =
         case head xs of
           'i' -> do val <- parseInt xs
-                    Right (BInteger val, dropInt xs)
+                    return (BInteger val, dropInt xs)
           'l' -> parseList (tail xs) []
           'd' -> parseDict (tail xs) []
           _   -> do val <- parseString xs
-                    Right (BString val, dropString xs (length val))
+                    return (BString val, dropString xs (length val))
 
 -- |Given a string and accumulator dictionary, return a dictionary
 -- consisting of the accumulator and the new key/value pair. Also return
@@ -62,9 +62,9 @@ rDecode xs
 parseDict :: ByteString -> [(ByteString, BType)] -> Either String (BType, ByteString)
 parseDict xs acc =
     if null xs
-      then Left "No value found to decode into dictionary."
+      then fail "No value found to decode into dictionary."
       else case head xs of
-         'e' -> Right (BDict acc, tail xs)
+         'e' -> return (BDict acc, tail xs)
          _   -> do key         <- parseString xs
                    (val, rest) <- rDecode $ dropString xs (length key)
                    parseDict rest (acc ++ [(key, val)])
@@ -75,9 +75,9 @@ parseDict xs acc =
 parseList :: ByteString -> [BType] -> Either String (BType, ByteString)
 parseList xs acc =
     if null xs
-      then Left "No value found to decode into list."
+      then fail "No value found to decode into list."
       else case head xs of
-        'e' -> Right (BList acc, tail xs)
+        'e' -> return (BList acc, tail xs)
         'd' -> do (val, rest) <- rDecode xs
                   parseList rest (acc ++ [val])
         'l' -> do (val, rest) <- rDecode xs
@@ -93,7 +93,7 @@ parseList xs acc =
 parseString :: ByteString -> Either String ByteString
 parseString s = do strLen <- readNumUntilChar s ':'
                    let rest = dropUntil (== ':') s -- drop through ':'
-                   Right $ take strLen rest
+                   return $ take strLen rest
 
 -- |Drop the string of length n from the Bencoded value.
 dropString :: ByteString -> Int -> ByteString
@@ -103,9 +103,9 @@ dropString s n = drop n $ dropUntil (== ':') s
 parseInt :: ByteString -> Either String Integer
 parseInt xs = 
     if null xs
-      then Left "No value found to decode into string."
+      then fail "No value found to decode into string."
       else do val <- readNumUntilChar (tail xs) 'e'
-              Right $ toInteger val
+              return $ toInteger val
 
 -- |Drop an integer from a Bencoded string.
 dropInt :: ByteString -> ByteString
@@ -116,6 +116,6 @@ readNumUntilChar :: ByteString -> Char -> Either String Int
 readNumUntilChar s c = 
     let val = reads (unpack $ takeWhile (/= c) s) :: [(Int, String)]
     in case val of
-         [(i, "")] -> Right i
-         _         -> Left "Invalid characters in decoded string."
+         [(i, "")] -> return i
+         _         -> fail "Invalid characters in decoded string."
 

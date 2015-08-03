@@ -10,11 +10,15 @@ module MetaInfoFile
 
 import Data.ByteString (ByteString, readFile)
 import Data.ByteString.Char8 (pack)
+-- import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.Trans.Except
+import Control.Monad.IO.Class (liftIO)
 import Prelude hiding (readFile)
 
 import Bencode (decode)
 import BType (BType(BList), unwrapBString, unwrapBInteger,
              unwrapBDict, unwrapBStringList)
+import Util (liftEither)
 
 data TorrentMeta = TorrentMeta
     { torrentMetaAnnounce :: ByteString
@@ -34,13 +38,13 @@ data MetaFile = MetaFile
     , metaFilePath   :: [ByteString]
     } deriving (Show, Eq)
 
-readTorrentFile :: FilePath -> IO (Either String TorrentMeta)
-readTorrentFile path = do contents <- readFile path
-                          case decode contents of
-                            Left msg -> return $ Left msg
-                            Right val -> case extractTorrentMeta val of
-                                           Nothing -> return $ Left "Unable to decode torrent meta file."
-                                           Just v -> return $ Right v
+readTorrentFile :: FilePath -> ExceptT String IO TorrentMeta
+readTorrentFile path = do 
+    contents <- liftIO $ readFile path
+    val <- liftEither $ decode contents
+    case extractTorrentMeta val of
+      Nothing -> throwE "Unable to decode torrent meta file."
+      Just v -> return v
 
 extractTorrentMeta :: BType -> Maybe TorrentMeta
 extractTorrentMeta dict = do
