@@ -6,6 +6,7 @@ import Data.ByteString.Char8 (pack)
 import MetaInfoFile
 import BType
 
+{-# ANN module "HLint: ignore Redundant do" #-}
 
 -- `main` is here so that this module can be run from GHCi on its own. It
 -- is not needed for automatic spec discovery.
@@ -34,16 +35,18 @@ spec = do
               encoded = BDict [(pack "announce", BString $ pack "foobar"),
                               (pack "info", metaInfoEncoded)]
           extractTorrentMeta encoded `shouldBe` Just expected
+
       describe "extractMetaInfo" $ do
         it "should extract a meta info BDict into a record" $ do
           extractMetaInfo metaInfoEncoded `shouldBe` Just metaInfo
+
       describe "extractMetaFile" $ do
         it "should extract a meta file BDict into a record" $ do
           let expected = MetaFile { metaFileLength = 100
                                   , metaFilePath = [pack "foo", pack "bar"]
                                   }
               encoded = BDict [(pack "length", BInteger 100),
-                              (pack "path", BList [BString $ pack "foo", 
+                              (pack "path", BList [BString $ pack "foo",
                                                   BString $ pack "bar"])]
           extractMetaFile encoded `shouldBe` Just expected
 
