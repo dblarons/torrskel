@@ -1,16 +1,25 @@
-## Torrskel
+# Torrskel
 
-Configure project with tests:
+## Setup
 
-`cabal configure --enable-test`
+`stack setup`
 
-Start REPL;
+## Commands
 
-`cabal repl`
+Build project:
 
-Run guard tests:
+`stack build`
 
-`guard`
+Run tests:
+
+```bash
+stack test
+# or, for hot reloading:
+npm install -g nodemon
+nodemon -w ./src,./test -e hs -x 'stack test'
+```
+
+## Documents
 
 All code written is based on my interpretation of
 

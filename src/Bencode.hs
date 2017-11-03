@@ -1,16 +1,22 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Bencode
-    ( encode,
-      decode
-      ) where
+module Bencode (
+    encode,
+    decode
+) where
 
-import Data.ByteString (ByteString, length, append, tail, null,
-                       take, drop)
+import Data.ByteString (
+    ByteString,
+    length,
+    append,
+    tail,
+    null,
+    take,
+    drop)
 import Data.ByteString.Char8 (pack, unpack, head, takeWhile)
 import Prelude hiding (length, head, tail, null, take, drop, takeWhile)
-import BType
 
+import BType
 import Util
 
 -- |Type class for producing BEncoded strings.
@@ -101,7 +107,7 @@ dropString s n = drop n $ dropUntil (== ':') s
 
 -- |Parse an integer from a Bencoded string.
 parseInt :: ByteString -> Either String Integer
-parseInt xs = 
+parseInt xs =
     if null xs
       then fail "No value found to decode into string."
       else do val <- readNumUntilChar (tail xs) 'e'
@@ -113,7 +119,7 @@ dropInt = dropUntil (== 'e')
 
 -- |Read a number from a string until a specified character is reached.
 readNumUntilChar :: ByteString -> Char -> Either String Int
-readNumUntilChar s c = 
+readNumUntilChar s c =
     let val = reads (unpack $ takeWhile (/= c) s) :: [(Int, String)]
     in case val of
          [(i, "")] -> return i
