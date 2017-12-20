@@ -1,7 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import MetaInfoFile
 import Control.Monad.Trans.Except
+import Network.Wreq
+
+import MetaInfoFile
 import Bencode
 
 main :: IO ()

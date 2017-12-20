@@ -1,10 +1,10 @@
 module BType
-    ( BType(BInteger, BString, BList, BDict)
-    , unwrapBString
-    , unwrapBInteger
-    , unwrapBDict
-    , unwrapBStringList
-    ) where
+  ( BType(BInteger, BString, BList, BDict)
+  , unwrapBString
+  , unwrapBInteger
+  , unwrapBDict
+  , unwrapBStringList
+  ) where
 
 import Data.ByteString (ByteString)
 

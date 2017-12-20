@@ -1,20 +1,30 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Bencode (
-    encode,
-    decode
-) where
+module Bencode
+  ( encode
+  , decode
+  ) where
 
-import Data.ByteString (
-    ByteString,
-    length,
-    append,
-    tail,
-    null,
-    take,
-    drop)
+import Prelude hiding
+  ( length
+  , head
+  , tail
+  , null
+  , take
+  , drop
+  , takeWhile
+  )
+
+import Data.ByteString
+  ( ByteString
+  , length
+  , append
+  , tail
+  , null
+  , take
+  , drop
+  )
 import Data.ByteString.Char8 (pack, unpack, head, takeWhile)
-import Prelude hiding (length, head, tail, null, take, drop, takeWhile)
 
 import BType
 import Util

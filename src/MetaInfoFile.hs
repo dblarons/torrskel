@@ -1,12 +1,12 @@
 module MetaInfoFile
-    ( readTorrentFile
-    , TorrentMeta(..)
-    , MetaInfo(..)
-    , MetaFile(..)
-    , extractTorrentMeta
-    , extractMetaInfo
-    , extractMetaFile
-      ) where
+  ( readTorrentFile
+  , TorrentMeta(..)
+  , MetaInfo(..)
+  , MetaFile(..)
+  , extractTorrentMeta
+  , extractMetaInfo
+  , extractMetaFile
+  ) where
 
 import Data.ByteString (ByteString, readFile)
 import Data.ByteString.Char8 (pack)
@@ -16,8 +16,13 @@ import Control.Monad.IO.Class (liftIO)
 import Prelude hiding (readFile)
 
 import Bencode (decode)
-import BType (BType(BList), unwrapBString, unwrapBInteger,
-             unwrapBDict, unwrapBStringList)
+import BType
+  ( BType(BList)
+  , unwrapBString
+  , unwrapBInteger
+  , unwrapBDict
+  , unwrapBStringList
+  )
 import Util (liftEither)
 
 data TorrentMeta = TorrentMeta
@@ -39,7 +44,7 @@ data MetaFile = MetaFile
     } deriving (Show, Eq)
 
 readTorrentFile :: FilePath -> ExceptT String IO TorrentMeta
-readTorrentFile path = do 
+readTorrentFile path = do
     contents <- liftIO $ readFile path
     val <- liftEither $ decode contents
     case extractTorrentMeta val of
@@ -58,7 +63,7 @@ extractTorrentMeta dict = do
         }
 
 extractMetaInfo :: BType -> Maybe MetaInfo
-extractMetaInfo dict = do 
+extractMetaInfo dict = do
     d <- unwrapBDict dict
     name <- lookup (pack "name") d >>= unwrapBString
     pieceLength <- lookup (pack "piece length") d >>= unwrapBInteger
