@@ -19,6 +19,12 @@ npm install -g nodemon
 nodemon -w ./src,./test -e hs -x 'stack test'
 ```
 
+## Formatting
+
+This project uses [hindent](https://github.com/commercialhaskell/hindent). In
+Vim, run hindent on file save with
+[vim-hindent](https://github.com/alx741/vim-hindent).
+
 ## Documents
 
 All code written is based on my interpretation of

@@ -3,19 +3,12 @@ module Util
   , liftEither
   ) where
 
-import Prelude hiding
-  ( dropWhile
-  , drop
-  )
+import Prelude hiding (drop, dropWhile)
 
-import Data.ByteString.Char8
-  ( ByteString
-  , dropWhile
-  , drop
-  )
 import Control.Monad.Trans.Except
+import Data.ByteString.Char8 (ByteString, drop, dropWhile)
 
--- | This method must be specific to the ByteString datatype because
+-- This method must be specific to the ByteString datatype because
 -- the ByteString interface does not match that of a list.
 dropUntil :: (Char -> Bool) -> ByteString -> ByteString
 dropUntil f xs = drop 1 $ dropWhile (not . f) xs

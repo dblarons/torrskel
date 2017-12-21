@@ -9,18 +9,17 @@ module BType
 import Data.ByteString (ByteString)
 
 data BType
-    = BString   ByteString
-    | BList     [BType]
-    | BInteger  Integer
-    | BDict     [(ByteString, BType)]
-    deriving (Eq, Show)
+  = BString ByteString
+  | BList [BType]
+  | BInteger Integer
+  | BDict [(ByteString, BType)]
+  deriving (Eq, Show)
 
--- | What follows is a series of unfortunate functions that are currently
+-- What follows is a series of unfortunate functions that are currently
 -- required to unwrap by BType data types. All return values are wrapped
 -- in `Maybe` so as to avoid creating a set of partial functions. I was not
 -- able to find a generic solution to the unwrapping problem; thus, I was
 -- left with my current approach.
-
 unwrapBString :: BType -> Maybe ByteString
 unwrapBString (BString s) = Just s
 unwrapBString _ = Nothing
@@ -39,6 +38,6 @@ unwrapBStringList bList = unwrapBStringListRecurse bList []
 unwrapBStringListRecurse :: BType -> [ByteString] -> Maybe [ByteString]
 unwrapBStringListRecurse (BList []) l = Just l
 unwrapBStringListRecurse (BList (x:xs)) l = do
-    next <- unwrapBString x
-    unwrapBStringListRecurse (BList xs) (l ++ [next])
+  next <- unwrapBString x
+  unwrapBStringListRecurse (BList xs) (l ++ [next])
 unwrapBStringListRecurse _ _ = Nothing
