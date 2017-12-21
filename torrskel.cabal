@@ -55,7 +55,7 @@ test-suite spec
                      , torrskel
                      , hspec
                      , bytestring
-  exposed-modules:       BTypeSpec
+  other-modules:       BTypeSpec
                      , BencodeSpec
                      , MetaInfoFileSpec
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
