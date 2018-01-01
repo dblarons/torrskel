@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module MetaInfoFile
   ( readTorrentFile
   , TorrentMeta(..)
   , MetaInfo(..)
   , MetaFile(..)
-  , extractTorrentMeta
-  , extractMetaInfo
-  , extractMetaFile
+  , unpack
   ) where
 
 import Prelude hiding (readFile)
@@ -43,42 +42,57 @@ readTorrentFile :: FilePath -> ExceptT String IO TorrentMeta
 readTorrentFile path = do
   fileContents <- liftIO $ readFile path
   dict <- liftEither $ decode fileContents
-  case extractTorrentMeta dict of
+  case unpack dict of
     Nothing -> throwE "Could not unpack torrent file BType"
     Just result -> return result
 
-extractTorrentMeta :: BType -> Maybe TorrentMeta
-extractTorrentMeta (BDict dict) = do
-  info <- lookup "info" dict
-  (BString announce) <- lookup "announce" dict
-  metaInfo <- extractMetaInfo info
-  return
-    TorrentMeta {torrentMetaAnnounce = announce, torrentMetaInfo = metaInfo}
-extractTorrentMeta _ = error "Torrent meta must be a dictionary"
+class Torrent a where
+  unpack :: BType -> Maybe a
 
-extractMetaInfo :: BType -> Maybe MetaInfo
-extractMetaInfo (BDict dict) = do
+instance Torrent TorrentMeta where
+  unpack (BDict dict) = do
+    info <- lookup "info" dict
+    (BString announce) <- lookup "announce" dict
+    metaInfo <- unpack info
+    return
+      TorrentMeta {torrentMetaAnnounce = announce, torrentMetaInfo = metaInfo}
+  unpack _ = error "Torrent meta must be a dictionary"
+
+getSharedMetaInfoKeys ::
+     [(ByteString, BType)] -> Maybe (ByteString, Integer, ByteString)
+getSharedMetaInfoKeys dict = do
   (BString name) <- lookup "name" dict
   (BInteger pieceLength) <- lookup "piece length" dict
   (BString pieces) <- lookup "pieces" dict
-  let metaInfos =
-        case lookup "files" dict of
-          Nothing -> Nothing
-          Just (BList files) -> Just (mapMaybe extractMetaFile files)
-          _ -> error "Metainfos must be a list of dictionaries"
-  Just
-    MetaInfo
-    { metaInfoName = name
-    , metaInfoPieceLength = pieceLength
-    , metaInfoPieces = pieces
-    , metaInfoLength = fmap fromBType (lookup "length" dict)
-    , metaInfoFiles = metaInfos
-    }
-extractMetaInfo _ = error "Metainfo must be a dictionary"
+  Just (name, pieceLength, pieces)
 
-extractMetaFile :: BType -> Maybe MetaFile
-extractMetaFile (BDict dict) = do
-  (BInteger len) <- lookup "length" dict
-  path <- lookup "path" dict
-  return MetaFile {metaFileLength = len, metaFilePath = fromBType path}
-extractMetaFile _ = error "Meta file must be a dictionary"
+instance Torrent MetaInfo where
+  unpack (BDict dict@(lookup "files" -> Just (BList files))) = do
+    (name, pieceLength, pieces) <- getSharedMetaInfoKeys dict
+    Just
+      MetaInfo
+      { metaInfoName = name
+      , metaInfoPieceLength = pieceLength
+      , metaInfoPieces = pieces
+      , metaInfoLength = Nothing
+      , metaInfoFiles = Just (mapMaybe unpack files)
+      }
+  unpack (BDict dict@(lookup "files" -> Nothing)) = do
+    (name, pieceLength, pieces) <- getSharedMetaInfoKeys dict
+    (BInteger len) <- lookup "length" dict
+    Just
+      MetaInfo
+      { metaInfoName = name
+      , metaInfoPieceLength = pieceLength
+      , metaInfoPieces = pieces
+      , metaInfoLength = Just len
+      , metaInfoFiles = Nothing
+      }
+  unpack _ = error "Metainfo must be a dictionary"
+
+instance Torrent MetaFile where
+  unpack (BDict dict) = do
+    (BInteger len) <- lookup "length" dict
+    path <- lookup "path" dict
+    return MetaFile {metaFileLength = len, metaFilePath = fromBType path}
+  unpack _ = error "Meta file must be a dictionary"

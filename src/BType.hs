@@ -3,6 +3,7 @@
 module BType
   ( BType(BInteger, BString, BList, BDict)
   , fromBType
+  , BData
   ) where
 
 import Data.ByteString (ByteString)
