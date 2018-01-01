@@ -10,6 +10,10 @@ Build project:
 
 `stack build`
 
+Run project:
+
+`stack exec torrskel-exe`
+
 Run tests:
 
 ```bash

@@ -14,10 +14,10 @@ import BType
 import Util
 
 -- Type class for producing BEncoded strings.
-class Encode a where
+class Encodable a where
   encode :: a -> ByteString
 
-instance Encode BType where
+instance Encodable BType where
   encode (BInteger i) = pack $ "i" ++ show i ++ "e"
   encode (BString xs) = pack (show (length xs)) `append` pack ":" `append` xs
   encode (BList []) = pack "le"

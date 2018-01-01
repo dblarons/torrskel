@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module MetaInfoFile
   ( readTorrentFile
   , TorrentMeta(..)
@@ -8,21 +10,14 @@ module MetaInfoFile
   , extractMetaFile
   ) where
 
-import Data.ByteString (ByteString, readFile)
-import Data.ByteString.Char8 (pack)
-
-import Control.Monad.IO.Class (liftIO)
--- import Control.Monad.Trans.Except (ExceptT, throwE)
-import Control.Monad.Trans.Except
 import Prelude hiding (readFile)
 
-import BType
-  ( BType(BList)
-  , unwrapBDict
-  , unwrapBInteger
-  , unwrapBString
-  , unwrapBStringList
-  )
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Except (ExceptT, throwE)
+import Data.ByteString (ByteString, readFile)
+import Data.Maybe (mapMaybe)
+
+import BType (BType(BDict, BInteger, BList, BString), fromBType)
 import Bencode (decode)
 import Util (liftEither)
 
@@ -46,53 +41,44 @@ data MetaFile = MetaFile
 
 readTorrentFile :: FilePath -> ExceptT String IO TorrentMeta
 readTorrentFile path = do
-  contents <- liftIO $ readFile path
-  val <- liftEither $ decode contents
-  case extractTorrentMeta val of
-    Nothing -> throwE "Unable to decode torrent meta file."
-    Just v -> return v
+  fileContents <- liftIO $ readFile path
+  dict <- liftEither $ decode fileContents
+  case extractTorrentMeta dict of
+    Nothing -> throwE "Could not unpack torrent file BType"
+    Just result -> return result
 
 extractTorrentMeta :: BType -> Maybe TorrentMeta
-extractTorrentMeta dict = do
-  d <- unwrapBDict dict
-  info <- lookup (pack "info") d
+extractTorrentMeta (BDict dict) = do
+  info <- lookup "info" dict
+  (BString announce) <- lookup "announce" dict
   metaInfo <- extractMetaInfo info
-  announce <- lookup (pack "announce") d >>= unwrapBString
-  Just TorrentMeta {torrentMetaAnnounce = announce, torrentMetaInfo = metaInfo}
+  return
+    TorrentMeta {torrentMetaAnnounce = announce, torrentMetaInfo = metaInfo}
+extractTorrentMeta _ = error "Torrent meta must be a dictionary"
 
 extractMetaInfo :: BType -> Maybe MetaInfo
-extractMetaInfo dict = do
-  d <- unwrapBDict dict
-  name <- lookup (pack "name") d >>= unwrapBString
-  pieceLength <- lookup (pack "piece length") d >>= unwrapBInteger
-  pieces <- lookup (pack "pieces") d >>= unwrapBString
-  let len =
-        case lookup (pack "length") d of
+extractMetaInfo (BDict dict) = do
+  (BString name) <- lookup "name" dict
+  (BInteger pieceLength) <- lookup "piece length" dict
+  (BString pieces) <- lookup "pieces" dict
+  let metaInfos =
+        case lookup "files" dict of
           Nothing -> Nothing
-          Just l -> unwrapBInteger l
-      files =
-        case lookup (pack "files") d of
-          Nothing -> Nothing
-          Just fs -> extractMetaFilesRecurse fs []
+          Just (BList files) -> Just (mapMaybe extractMetaFile files)
+          _ -> error "Metainfos must be a list of dictionaries"
   Just
     MetaInfo
     { metaInfoName = name
     , metaInfoPieceLength = pieceLength
     , metaInfoPieces = pieces
-    , metaInfoLength = len
-    , metaInfoFiles = files
+    , metaInfoLength = fmap fromBType (lookup "length" dict)
+    , metaInfoFiles = metaInfos
     }
-
-extractMetaFilesRecurse :: BType -> [MetaFile] -> Maybe [MetaFile]
-extractMetaFilesRecurse (BList []) l = Just l
-extractMetaFilesRecurse (BList (x:xs)) l = do
-  metaFile <- extractMetaFile x
-  extractMetaFilesRecurse (BList xs) (l ++ [metaFile])
-extractMetaFilesRecurse _ _ = Nothing
+extractMetaInfo _ = error "Metainfo must be a dictionary"
 
 extractMetaFile :: BType -> Maybe MetaFile
-extractMetaFile dict = do
-  d <- unwrapBDict dict
-  l <- lookup (pack "length") d >>= unwrapBInteger
-  path <- lookup (pack "path") d >>= unwrapBStringList
-  Just MetaFile {metaFileLength = l, metaFilePath = path}
+extractMetaFile (BDict dict) = do
+  (BInteger len) <- lookup "length" dict
+  path <- lookup "path" dict
+  return MetaFile {metaFileLength = len, metaFilePath = fromBType path}
+extractMetaFile _ = error "Meta file must be a dictionary"
